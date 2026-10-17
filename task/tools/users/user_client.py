@@ -27,7 +27,7 @@ class UserClient:
     def get_user(self, user_id: int) -> str:
         headers = {"Content-Type": "application/json"}
 
-        response = requests.get(url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}", headers=headers)
+        response = requests.get(url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}", headers=headers, timeout=30)
 
         if response.status_code == 200:
             data = response.json()
@@ -54,7 +54,7 @@ class UserClient:
         if gender:
             params["gender"] = gender
 
-        response = requests.get(url=USER_SERVICE_ENDPOINT + "/v1/users/search", headers=headers, params=params)
+        response = requests.get(url=USER_SERVICE_ENDPOINT + "/v1/users/search", headers=headers, params=params, timeout=30)
 
         if response.status_code == 200:
             data = response.json()
@@ -69,7 +69,8 @@ class UserClient:
         response = requests.post(
             url=f"{USER_SERVICE_ENDPOINT}/v1/users",
             headers=headers,
-            json=user_create_model.model_dump()
+            json=user_create_model.model_dump(),
+            timeout=30
         )
 
         if response.status_code == 201:
@@ -83,7 +84,8 @@ class UserClient:
         response = requests.put(
             url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}",
             headers=headers,
-            json=user_update_model.model_dump()
+            json=user_update_model.model_dump(),
+            timeout=30
         )
 
         if response.status_code == 201:
@@ -94,7 +96,7 @@ class UserClient:
     def delete_user(self, user_id: int) -> str:
         headers = {"Content-Type": "application/json"}
 
-        response = requests.delete(url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}", headers=headers)
+        response = requests.delete(url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}", headers=headers, timeout=30)
 
         if response.status_code == 204:
             return "User successfully deleted"
