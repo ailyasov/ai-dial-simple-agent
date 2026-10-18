@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import requests
 
@@ -6,8 +6,8 @@ from task.tools.users.models.user_info import UserCreate, UserUpdate
 
 USER_SERVICE_ENDPOINT = "http://localhost:8041"
 
-class UserClient:
 
+class UserClient:
     def __user_to_string(self, user: dict[str, Any]):
         user_str = "```\n"
         for key, value in user.items():
@@ -27,7 +27,11 @@ class UserClient:
     def get_user(self, user_id: int) -> str:
         headers = {"Content-Type": "application/json"}
 
-        response = requests.get(url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}", headers=headers, timeout=30)
+        response = requests.get(
+            url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}",
+            headers=headers,
+            timeout=30,
+        )
 
         if response.status_code == 200:
             data = response.json()
@@ -36,11 +40,11 @@ class UserClient:
         raise Exception(f"HTTP {response.status_code}: {response.text}")
 
     def search_users(
-            self,
-            name: Optional[str] = None,
-            surname: Optional[str] = None,
-            email: Optional[str] = None,
-            gender: Optional[str] = None,
+        self,
+        name: str | None = None,
+        surname: str | None = None,
+        email: str | None = None,
+        gender: str | None = None,
     ) -> str:
         headers = {"Content-Type": "application/json"}
 
@@ -54,12 +58,21 @@ class UserClient:
         if gender:
             params["gender"] = gender
 
-        response = requests.get(url=USER_SERVICE_ENDPOINT + "/v1/users/search", headers=headers, params=params, timeout=30)
+        response = requests.get(
+            url=USER_SERVICE_ENDPOINT + "/v1/users/search",
+            headers=headers,
+            params=params,
+            timeout=30,
+        )
 
+        MAX_USERS = 25
         if response.status_code == 200:
             data = response.json()
-            print(f"Get {len(data)} users successfully")
-            return self.__users_to_string(data)
+            total = len(data)
+            data = data[:MAX_USERS]
+            print(f"showing first {len(data)} of {total} matching users")
+            result = f"showing first {len(data)} of {total} matching users"
+            return result + "\n" + self.__users_to_string(data)
 
         raise Exception(f"HTTP {response.status_code}: {response.text}")
 
@@ -70,7 +83,7 @@ class UserClient:
             url=f"{USER_SERVICE_ENDPOINT}/v1/users",
             headers=headers,
             json=user_create_model.model_dump(),
-            timeout=30
+            timeout=30,
         )
 
         if response.status_code == 201:
@@ -85,7 +98,7 @@ class UserClient:
             url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}",
             headers=headers,
             json=user_update_model.model_dump(),
-            timeout=30
+            timeout=30,
         )
 
         if response.status_code == 201:
@@ -96,7 +109,11 @@ class UserClient:
     def delete_user(self, user_id: int) -> str:
         headers = {"Content-Type": "application/json"}
 
-        response = requests.delete(url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}", headers=headers, timeout=30)
+        response = requests.delete(
+            url=f"{USER_SERVICE_ENDPOINT}/v1/users/{user_id}",
+            headers=headers,
+            timeout=30,
+        )
 
         if response.status_code == 204:
             return "User successfully deleted"

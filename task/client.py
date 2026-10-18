@@ -79,7 +79,9 @@ class DialClient:
                 json.dumps({"messages": [msg.to_dict() for msg in messages]}, indent=2),
             )
 
-        response = requests.post(url=self._endpoint, headers=headers, json=request_data, timeout=30)
+        response = requests.post(
+            url=self._endpoint, headers=headers, json=request_data, timeout=30
+        )
         if response.status_code != 200:
             raise Exception(f"HTTP {response.status_code}: {response.text}")
         data = response.json()
@@ -144,6 +146,12 @@ class DialClient:
                 tool_execution_result = " | ".join(error_message)
             else:
                 tool_execution_result = self._call_tool(function_name, arguments)
+                MAX_TOOL_CHARS = 20000  # about 5K tokens, far under the 128K window
+                if len(tool_execution_result) > MAX_TOOL_CHARS:
+                    tool_execution_result = (
+                        tool_execution_result[:MAX_TOOL_CHARS]
+                        + "\n... [result truncated]"
+                    )
             tool_messages.append(
                 Message(
                     role=Role.TOOL,
