@@ -52,14 +52,17 @@ def main():
 
         conversation.add_message(Message(role=Role.USER, content=user_input))
 
-        response_message = dial_client.get_completion(
-            messages=conversation.get_messages(), print_request=True
-        )
+        try:
+            response_message = dial_client.get_completion(
+                messages=conversation.get_messages(), print_request=True
+            )
+        except Exception as error:
+            print(f"Request failed: {error}")
+            continue
+
         conversation.add_message(
             Message(role=Role.AI, content=response_message.content)
         )
-
-        print(f"Assistant: {response_message.content}")
 
 
 if __name__ == "__main__":

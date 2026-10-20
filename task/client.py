@@ -70,6 +70,7 @@ class DialClient:
         request_data = {
             "messages": [msg.to_dict() for msg in messages],
             "tools": self._tools,
+            "stream": True,
         }
 
         if print_request:
@@ -80,27 +81,62 @@ class DialClient:
             )
 
         response = requests.post(
-            url=self._endpoint, headers=headers, json=request_data, timeout=30
+            url=self._endpoint,
+            headers=headers,
+            json=request_data,
+            timeout=30,
+            stream=True,
         )
-        if response.status_code != 200:
-            raise Exception(f"HTTP {response.status_code}: {response.text}")
-        data = response.json()
-        choices = data.get("choices")
-        if not choices:
-            raise Exception("No choices in response found")
-        message = choices[0].get("message")
-        if not message:
-            raise Exception("No message in response found")
-        content = message.get("content", "")
+        content_parts = []
+        finish_reason = None
+        assembled = {}
+        for line in response.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data: "):
+                continue
+            payload = line[len("data: ") :]
+            if payload == "[DONE]":
+                break
+            chunk = json.loads(payload)
+            choice = chunk["choices"][0]
+            delta = choice.get("delta") or {}
+            if delta.get("content"):
+                content_parts.append(delta["content"])
+                print(delta["content"], end="", flush=True)
+            if delta.get("tool_calls"):
+                for fragment in delta["tool_calls"]:
+                    index = fragment["index"]
+                    if index not in assembled:
+                        assembled[index] = {
+                            "id": fragment["id"],
+                            "type": fragment.get("type", "function"),
+                            "name": fragment["function"].get("name", ""),
+                            "arguments": "",
+                        }
+                    assembled[index]["arguments"] += fragment["function"].get(
+                        "arguments", ""
+                    )
 
-        tool_calls = message.get("tool_calls", [])
+            if choice.get("finish_reason"):
+                finish_reason = choice["finish_reason"]
+        content = "".join(content_parts)
+
+        tool_calls = [
+            {
+                "id": entry["id"],
+                "type": entry.get("type", "function"),
+                "function": {"name": entry["name"], "arguments": entry["arguments"]},
+            }
+            for _, entry in sorted(assembled.items())
+        ]
+
         ai_response = Message(role=Role.AI, content=content, tool_calls=tool_calls)
-        if choices[0].get("finish_reason") == "tool_calls":
+        if finish_reason == "tool_calls":
             messages.append(ai_response)
             tool_messages = self._process_tool_calls(tool_calls)
             messages.extend(tool_messages)
             return self.get_completion(messages, print_request)
 
+        print()
         return ai_response
 
     def _process_tool_calls(self, tool_calls: list[dict[str, Any]]) -> list[Message]:
